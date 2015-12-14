@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 2.8)
+project( saliencySeg )
+find_package( OpenCV REQUIRED )
+add_executable( saliencySeg sailencySeg.cpp )
+target_link_libraries( saliencySeg ${OpenCV_LIBS} )
