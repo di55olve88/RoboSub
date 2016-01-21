@@ -4,7 +4,6 @@
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 #include <iostream>
@@ -49,13 +48,55 @@ static void findSquares( const Mat& image, vector<vector<Point> >& squares )
 {
     squares.clear();
 
-    Mat pyr, timg, gray0(image.size(), CV_8U), gray;
+    Mat pyr, timg;
 
     // down-scale and upscale the image to filter out the noise
     pyrDown(image, pyr, Size(image.cols/2, image.rows/2));
     pyrUp(pyr, timg, image.size());
     vector<vector<Point> > contours;
 
+	// find contours and store them all as a list
+            findContours(timg, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+
+            vector<Point> approx;
+		    cout << contours.size() << endl;
+            // test each contour
+            for( size_t i = 0; i < contours.size(); i++ )
+            {
+                // approximate contour with accuracy proportional
+                // to the contour perimeter
+                approxPolyDP(Mat(contours[i]), approx, arcLength(Mat(contours[i]), true)*0.02, true);
+
+                // square contours should have 4 vertices after approximation
+                // relatively large area (to filter out noisy contours)
+                // and be convex.
+                // Note: absolute value of an area is used because
+                // area may be positive or negative - in accordance with the
+                // contour orientation
+		
+                if( approx.size() == 4 &&
+                    fabs(contourArea(Mat(approx))) > 1000 &&
+                    isContourConvex(Mat(approx)) )
+                {
+
+                    double maxCosine = 0;
+
+                    for( int j = 2; j < 5; j++ )
+                    {
+                        // find the maximum cosine of the angle between joint edges
+                        double cosine = fabs(angle(approx[j%4], approx[j-2], approx[j-1]));
+                        maxCosine = MAX(maxCosine, cosine);
+                    }
+
+                    // if cosines of all angles are small
+                    // (all angles are ~90 degree) then write quandrange
+                    // vertices to resultant sequence
+                    if( maxCosine < 0.3 )
+                        squares.push_back(approx);
+                }
+            }
+		squares.push_back(approx);
+/*
     // find squares in every color plane of the image
     for( int c = 0; c < 3; c++ )
     {
@@ -84,7 +125,7 @@ static void findSquares( const Mat& image, vector<vector<Point> >& squares )
             }
 
             // find contours and store them all as a list
-            findContours(gray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+            findContours(gray, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
 
             vector<Point> approx;
 
@@ -123,6 +164,7 @@ static void findSquares( const Mat& image, vector<vector<Point> >& squares )
             }
         }
     }
+*/
 }
 
 
@@ -133,17 +175,49 @@ static void drawSquares( Mat& image, const vector<vector<Point> >& squares )
     {
         const Point* p = &squares[i][0];
         int n = (int)squares[i].size();
-        polylines(image, &p, &n, 1, true, Scalar(0,255,0), 3, LINE_AA);
+        polylines(image, &p, &n, 1, true, Scalar(0,255,0), 3, CV_AA,0);
     }
 
     imshow(wndname, image);
 }
 
+static void detectTarget(const Mat& src, Mat& dst) {
+	Mat h_max, h_min, s_min, v_min, v_max;
+	
+	Mat hsvI;
+	cvtColor(src,hsvI,CV_RGB2HSV,0);
+	Mat chans[3];
+
+	  // may not actually be seperated as hsv order
+	split(hsvI,chans);
+	
+	threshold(chans[0], h_min, 100, 255, CV_THRESH_BINARY); //hue max thresh
+	threshold(chans[0], h_max, 110, 255, CV_THRESH_BINARY_INV); //hue min thresh
+	threshold(chans[1], s_min, 200, 255, CV_THRESH_BINARY); //saturation min
+	threshold(chans[2], v_min, 200, 255, CV_THRESH_BINARY); //varience min 
+	threshold(chans[2], v_max, 220, 255, CV_THRESH_BINARY_INV); //varience max
+
+	dst = h_min & h_max & s_min & v_min;
+
+	Mat element = getStructuringElement( MORPH_RECT, Size( 2*2 + 1, 2*2+1 ), Point( 2, 2 ) );
+
+	morphologyEx(dst,dst,MORPH_CLOSE,element,Point(-1,-1),2,BORDER_CONSTANT);
+}
+/*
+static void findMarkerAttitude(Mat& binary_img, Mat& rvec, Mat& tvec) {
+	Mat cameraMatrix = ;
+	vector<Point3f> object_points = ;
+	vector<Point2f> image_points = ;
+
+	float distCoeff[] = {};
+
+	solvePnP(object_points, image_points, cameraMatrix, distCoeff, rvec, tvec, false, 15, CV_P3P);
+}*/
 
 int main(int /*argc*/, char** /*argv*/)
 {
-    static const char* names[] = { "../data/pic1.png", "../data/pic2.png", "../data/pic3.png",
-        "../data/pic4.png", "../data/pic5.png", "../data/pic6.png", 0 };
+    static const char* names[] = { "../image_data_set/lighting_data_set/1.jpg","../image_data_set/lighting_data_set/2.jpg","../image_data_set/lighting_data_set/3.jpg","../image_data_set/lighting_data_set/4.jpg","../image_data_set/lighting_data_set/5.jpg","../image_data_set/lighting_data_set/6.jpg","../image_data_set/lighting_data_set/7.jpg","../image_data_set/lighting_data_set/8.jpg","../image_data_set/lighting_data_set/9.jpg","../image_data_set/lighting_data_set/10.jpg", 0 };
+
     help();
     namedWindow( wndname, 1 );
     vector<vector<Point> > squares;
@@ -151,13 +225,22 @@ int main(int /*argc*/, char** /*argv*/)
     for( int i = 0; names[i] != 0; i++ )
     {
         Mat image = imread(names[i], 1);
+
+	pyrDown(image, image);
+	pyrDown(image, image);
+	pyrDown(image, image);
         if( image.empty() )
         {
             cout << "Couldn't load " << names[i] << endl;
             continue;
         }
 
-        findSquares(image, squares);
+	Mat binary;
+	detectTarget(image, binary);
+
+
+	imshow("Image", binary);
+        findSquares(binary, squares);
         drawSquares(image, squares);
 
         int c = waitKey();

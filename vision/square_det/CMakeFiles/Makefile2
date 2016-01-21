@@ -47,10 +47,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/ucruas/RoboSub/vision/square_det
+CMAKE_SOURCE_DIR = /home/drew/Projects/RoboSub/vision/square_det
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/ucruas/RoboSub/vision/square_det
+CMAKE_BINARY_DIR = /home/drew/Projects/RoboSub/vision/square_det
 
 #=============================================================================
 # Target rules for target CMakeFiles/squares.dir
@@ -59,7 +59,7 @@ CMAKE_BINARY_DIR = /home/ucruas/RoboSub/vision/square_det
 CMakeFiles/squares.dir/all:
 	$(MAKE) -f CMakeFiles/squares.dir/build.make CMakeFiles/squares.dir/depend
 	$(MAKE) -f CMakeFiles/squares.dir/build.make CMakeFiles/squares.dir/build
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/ucruas/RoboSub/vision/square_det/CMakeFiles  1
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/drew/Projects/RoboSub/vision/square_det/CMakeFiles  1
 	@echo "Built target squares"
 .PHONY : CMakeFiles/squares.dir/all
 
@@ -69,9 +69,9 @@ all: CMakeFiles/squares.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/squares.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/ucruas/RoboSub/vision/square_det/CMakeFiles 1
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/drew/Projects/RoboSub/vision/square_det/CMakeFiles 1
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/squares.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/ucruas/RoboSub/vision/square_det/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/drew/Projects/RoboSub/vision/square_det/CMakeFiles 0
 .PHONY : CMakeFiles/squares.dir/rule
 
 # Convenience name for target.
