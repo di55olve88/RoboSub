@@ -57,15 +57,17 @@ static void findSquares( const Mat& image, vector<vector<Point> >& squares )
 
 	// find contours and store them all as a list
             findContours(timg, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
-
+	    vector<vector<Point> >hull( contours.size() );
             vector<Point> approx;
-		    cout << contours.size() << endl;
             // test each contour
+
             for( size_t i = 0; i < contours.size(); i++ )
             {
                 // approximate contour with accuracy proportional
                 // to the contour perimeter
-                approxPolyDP(Mat(contours[i]), approx, arcLength(Mat(contours[i]), true)*0.02, true);
+		convexHull( Mat(contours[i]), approx, false );
+ 
+                approxPolyDP(Mat(hull[i]), approx, arcLength(Mat(contours[i]), true)*0.02, true);
 
                 // square contours should have 4 vertices after approximation
                 // relatively large area (to filter out noisy contours)
@@ -171,13 +173,18 @@ static void findSquares( const Mat& image, vector<vector<Point> >& squares )
 // the function draws all the squares in the image
 static void drawSquares( Mat& image, const vector<vector<Point> >& squares )
 {
+	Mat edges;
+
+/*
     for( size_t i = 0; i < squares.size(); i++ )
     {
         const Point* p = &squares[i][0];
         int n = (int)squares[i].size();
         polylines(image, &p, &n, 1, true, Scalar(0,255,0), 3, CV_AA,0);
-    }
+    }*/
 
+	drawContours(edges, squares, -1, Scalar(255), 1);
+	image = edges;
     imshow(wndname, image);
 }
 
@@ -204,20 +211,29 @@ static void detectTarget(const Mat& src, Mat& dst) {
 	morphologyEx(dst,dst,MORPH_CLOSE,element,Point(-1,-1),2,BORDER_CONSTANT);
 }
 /*
-static void findMarkerAttitude(Mat& binary_img, Mat& rvec, Mat& tvec) {
-	Mat cameraMatrix = ;
-	vector<Point3f> object_points = ;
-	vector<Point2f> image_points = ;
+static void findMarkerAttitude(const Mat& img, vector<vector<Point> >& squares ) {
+	Mat edge_img = Mat(squares);
+	
+	cout << edge_img.size() << endl;
 
-	float distCoeff[] = {};
+	Mat color_img = img;	
+	vector<Vec4i> lines;
+	Canny(edge_img, edge_img, 10, 100, 3, false);
+	HoughLinesP(edge_img, lines, 1, CV_PI/180, 80, 30, 10 );
+	for( size_t i = 0; i < lines.size(); i++ )
+    	{
+       		 line( color_img, Point(lines[i][0], lines[i][1]), 
+			Point(lines[i][2], lines[i][3]), Scalar(255,0,0), 3, 8 );
+    	}
+	
+	namedWindow( "Detected Lines", 1 );
+    	imshow( "Detected Lines", color_img );
 
-	solvePnP(object_points, image_points, cameraMatrix, distCoeff, rvec, tvec, false, 15, CV_P3P);
 }*/
 
 int main(int /*argc*/, char** /*argv*/)
 {
-    static const char* names[] = { "../image_data_set/lighting_data_set/1.jpg","../image_data_set/lighting_data_set/2.jpg","../image_data_set/lighting_data_set/3.jpg","../image_data_set/lighting_data_set/4.jpg","../image_data_set/lighting_data_set/5.jpg","../image_data_set/lighting_data_set/6.jpg","../image_data_set/lighting_data_set/7.jpg","../image_data_set/lighting_data_set/8.jpg","../image_data_set/lighting_data_set/9.jpg","../image_data_set/lighting_data_set/10.jpg", 0 };
-
+    static const char* names[] = { "../marker_small.jpg", 0 };
     help();
     namedWindow( wndname, 1 );
     vector<vector<Point> > squares;
@@ -225,10 +241,6 @@ int main(int /*argc*/, char** /*argv*/)
     for( int i = 0; names[i] != 0; i++ )
     {
         Mat image = imread(names[i], 1);
-
-	pyrDown(image, image);
-	pyrDown(image, image);
-	pyrDown(image, image);
         if( image.empty() )
         {
             cout << "Couldn't load " << names[i] << endl;
@@ -237,12 +249,10 @@ int main(int /*argc*/, char** /*argv*/)
 
 	Mat binary;
 	detectTarget(image, binary);
-
-
 	imshow("Image", binary);
         findSquares(binary, squares);
-        drawSquares(image, squares);
-
+        drawSquares(image, squares);	
+	//findMarkerAttitude( image, squares );
         int c = waitKey();
         if( (char)c == 27 )
             break;
