@@ -4,6 +4,7 @@
 
 #include "opencv2/core/core.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
 #include <iostream>
@@ -48,57 +49,13 @@ static void findSquares( const Mat& image, vector<vector<Point> >& squares )
 {
     squares.clear();
 
-    Mat pyr, timg;
+    Mat pyr, timg, gray0(image.size(), CV_8U), gray;
 
     // down-scale and upscale the image to filter out the noise
     pyrDown(image, pyr, Size(image.cols/2, image.rows/2));
     pyrUp(pyr, timg, image.size());
     vector<vector<Point> > contours;
 
-	// find contours and store them all as a list
-            findContours(timg, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
-	    vector<vector<Point> >hull( contours.size() );
-            vector<Point> approx;
-            // test each contour
-
-            for( size_t i = 0; i < contours.size(); i++ )
-            {
-                // approximate contour with accuracy proportional
-                // to the contour perimeter
-		convexHull( Mat(contours[i]), approx, false );
- 
-                //approxPolyDP(Mat(hull[i]), approx, arcLength(Mat(contours[i]), true)*0.02, true);
-
-                // square contours should have 4 vertices after approximation
-                // relatively large area (to filter out noisy contours)
-                // and be convex.
-                // Note: absolute value of an area is used because
-                // area may be positive or negative - in accordance with the
-                // contour orientation
-		
-                if( approx.size() == 4 &&
-                    fabs(contourArea(Mat(approx))) > 1000 &&
-                    isContourConvex(Mat(approx)) )
-                {
-
-                    double maxCosine = 0;
-
-                    for( int j = 2; j < 5; j++ )
-                    {
-                        // find the maximum cosine of the angle between joint edges
-                        double cosine = fabs(angle(approx[j%4], approx[j-2], approx[j-1]));
-                        maxCosine = MAX(maxCosine, cosine);
-                    }
-
-                    // if cosines of all angles are small
-                    // (all angles are ~90 degree) then write quandrange
-                    // vertices to resultant sequence
-                    if( maxCosine < 0.3 )
-                        squares.push_back(approx);
-                }
-            }
-		squares.push_back(approx);
-/*
     // find squares in every color plane of the image
     for( int c = 0; c < 3; c++ )
     {
@@ -127,7 +84,7 @@ static void findSquares( const Mat& image, vector<vector<Point> >& squares )
             }
 
             // find contours and store them all as a list
-            findContours(gray, contours, CV_RETR_LIST, CV_CHAIN_APPROX_SIMPLE);
+            findContours(gray, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
 
             vector<Point> approx;
 
@@ -166,90 +123,27 @@ static void findSquares( const Mat& image, vector<vector<Point> >& squares )
             }
         }
     }
-*/
 }
 
 
-// the function draws all the squaraes in the image
+// the function draws all the squares in the image
 static void drawSquares( Mat& image, const vector<vector<Point> >& squares )
 {
-	Mat edges = Mat(image.size(), CV_8U, Scalar(0));
-
-/*
     for( size_t i = 0; i < squares.size(); i++ )
     {
         const Point* p = &squares[i][0];
         int n = (int)squares[i].size();
-        polylines(image, &p, &n, 1, true, Scalar(0,255,0), 3, CV_AA,0);
-    }*/
+        polylines(image, &p, &n, 1, true, Scalar(0,255,0), 3, LINE_AA);
+    }
 
-	drawContours(edges, squares, -1, Scalar(255,0,0), 1);
-	//cout << "got here" << endl;
-    imshow("Image", edges);
-	image = edges;
-
+    imshow(wndname, image);
 }
 
-static void detectTarget(const Mat& src, Mat& dst) {
-	Mat h_max, h_min, s_min, v_min, v_max;
-	
-	Mat hsvI, eq_img;
-	vector<Mat> rgb(3);
-	eq_img = src;
-	split(eq_img, rgb);
-	//equalizeHist(rgb[0], rgb[0]);
-	//equalizeHist(rgb[1], rgb[1]);	
-	//equalizeHist(rgb[2], rgb[2]);
-	
-	merge(rgb, eq_img);
-
-	cvtColor(eq_img,hsvI,CV_RGB2HSV,0);
-	Mat chans[3];
-
-	  // may not actually be seperated as hsv order
-	split(hsvI,chans);
-	equalizeHist(chans[0], chans[0]);
-	equalizeHist(chans[2], chans[2]);
-	threshold(chans[0], h_min, 240, 255, CV_THRESH_BINARY_INV); //hue max thresh
-	threshold(chans[0], h_max, 235, 255, CV_THRESH_BINARY); //hue min thresh
-	threshold(chans[1], s_min, 200, 255, CV_THRESH_BINARY); //saturation min
-	threshold(chans[2], v_min, 0, 20, CV_THRESH_BINARY_INV); //varience min 
-	threshold(chans[2], v_max, 220, 255, CV_THRESH_BINARY); //varience max
-
-	imshow("Hue", h_min);
-	imshow("Sat", h_max);	
-	//imshow("Var", chans[2]);
-
-	dst = s_min;
-
-	Mat element = getStructuringElement( MORPH_RECT, Size( 2*2 + 1, 2*2+1 ), Point( 2, 2 ) );
-
-	//morphologyEx(dst,dst,MORPH_CLOSE,element,Point(-1,-1),2,BORDER_CONSTANT);
-}
-
-static void findMarkerAttitude(const Mat& edges, Mat& color_img, vector<vector<Point> >& squares ) {
-	Mat edge_img = edges;
-	
-	cout << edge_img.size() << " ";
-
-	vector<Vec4i> lines;
-	Canny(edge_img, edge_img, 10, 100, 3, false);
-	HoughLinesP(edge_img, lines, 1, CV_PI/180, 10, 10, 11 );
-	cout << "number of lines " << lines.size() << endl;
-	for( size_t i = 0; i < lines.size(); i++ )
-    	{
-			line( color_img, Point(lines[i][0], lines[i][1]), 
-			Point(lines[i][2], lines[i][3]), Scalar(255,0,0), 3, 8 );
-    	}
-	
-	namedWindow( "Detected Lines", 1 );
-    imshow( "Detected Lines", color_img );
-
-}
 
 int main(int /*argc*/, char** /*argv*/)
 {
-    static const char* names[] = { "../../image_data_set/lighting_data_set/1.jpg","../../image_data_set/lighting_data_set/2.jpg", "../..image_data_set/lighting_data_set/3.jpg","../../image_data_set/lighting_data_set/4.jpg","../../image_data_set/lighting_data_set/5.jpg","../../image_data_set/lighting_data_set/6.jpg","../../image_data_set/lighting_data_set/7.jpg","../../image_data_set/lighting_data_set/8.jpg","../../image_data_set/lighting_data_set/10.jpg",0 };
+    static const char* names[] = { "../data/pic1.png", "../data/pic2.png", "../data/pic3.png",
+        "../data/pic4.png", "../data/pic5.png", "../data/pic6.png", 0 };
     help();
     namedWindow( wndname, 1 );
     vector<vector<Point> > squares;
@@ -262,15 +156,10 @@ int main(int /*argc*/, char** /*argv*/)
             cout << "Couldn't load " << names[i] << endl;
             continue;
         }
-	pyrDown(image, image);
-	pyrDown(image, image);
-	pyrDown(image, image);
-	Mat binary;
-	detectTarget(image, binary);
-	imshow("Image", binary);
-    findSquares(binary, squares);
-    drawSquares(binary, squares);	
-	findMarkerAttitude( binary, image, squares );
+
+        findSquares(image, squares);
+        drawSquares(image, squares);
+
         int c = waitKey();
         if( (char)c == 27 )
             break;

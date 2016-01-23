@@ -218,7 +218,7 @@ static void detectTarget(const Mat& src, Mat& dst) {
 
 	imshow("Hue", h_min);
 	imshow("Sat", h_max);	
-	//imshow("Var", chans[2]);
+	imshow("Var", chans[2]);
 
 	dst = s_min;
 

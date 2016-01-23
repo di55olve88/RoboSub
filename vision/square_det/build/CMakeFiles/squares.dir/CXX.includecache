@@ -1,0 +1,22 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/ucruas/RoboSub/vision/square_det/squares.cpp
+opencv2/core/core.hpp
+/home/ucruas/RoboSub/vision/square_det/opencv2/core/core.hpp
+opencv2/imgproc/imgproc.hpp
+/home/ucruas/RoboSub/vision/square_det/opencv2/imgproc/imgproc.hpp
+opencv2/highgui/highgui.hpp
+/home/ucruas/RoboSub/vision/square_det/opencv2/highgui/highgui.hpp
+iostream
+-
+math.h
+-
+string.h
+-
+

@@ -1,0 +1,1 @@
+/home/ucruas/RoboSub/vision/square_det/build/CMakeFiles/squares.dir
